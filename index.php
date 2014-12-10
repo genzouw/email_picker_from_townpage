@@ -9,21 +9,17 @@ $client = new Client();
 
 $makeNextLink = function ( $prefId, $pageNumber ) {
     // return "http://itp.ne.jp/genre_dir/buildingfirm/pg/${pageNumber}/?ngr=1&num=50";
-    return "http://itp.ne.jp/yamanashi/genre_dir/${prefId}/${pageNumber}/?sr=1&nad=1&ngr=1&num=50";
+    // return "http://itp.ne.jp//${prefId}/genre_dir/${pageNumber}/?sr=1&nad=1&ngr=1&num=50";
+    return "http://itp.ne.jp/${prefId}/19201/genre_dir/pg/${pageNumber}/?sr=1&nad=1&ngr=1&num=50";
 };
 
 
 $prefIds = array(
-    1005,3242,3243,3258,3269,
-    3280,3319,3326,3330,3678,
-    3679,3680,3681,3682,3683,
-    3684,3685,3686,3687,3688,
-    3781,3782,3783,3784,3785,
-    3786,3787,3788,3789,3790,
-    5386,5387,5389,5391,813,
-    816,819,820,821,822,
-    825,826,827,828,829,
-    830,833,
+    'yamanashi', 'yamaguchi', 'yamagata', 'wakayama', 'toyama', 'tottori', 'tokyo', 'tokushima', 'tochigi', 'shizuoka',
+    'shimane', 'shiga', 'saitama', 'saga', 'osaka', 'okinawa', 'okayama', 'oita', 'niigata', 'nara',
+    'nagasaki', 'nagano', 'miyazaki', 'miyagi', 'mie', 'kyoto', 'kumamoto', 'kouchi', 'kanagawa', 'kagoshima',
+    'kagawa', 'iwate', 'ishikawa', 'ibaraki', 'hyogo', 'hokkaido', 'hiroshima', 'gunma', 'gifu', 'fukushima',
+    'fukuoka', 'fukui', 'ehime', 'chiba', 'aomori', 'akita', 'aichi',
 );
 
 echo "会社名,メールアドレス", PHP_EOL;
