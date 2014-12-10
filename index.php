@@ -7,39 +7,55 @@ use Symfony\Component\DomCrawler\Crawler;
 
 $client = new Client();
 
-$makeNextLink = function ( $pageNumber ) {
-    return "http://itp.ne.jp/genre_dir/buildingfirm/pg/${pageNumber}/?ngr=1&num=50";
+$makeNextLink = function ( $prefId, $pageNumber ) {
+    // return "http://itp.ne.jp/genre_dir/buildingfirm/pg/${pageNumber}/?ngr=1&num=50";
+    return "http://itp.ne.jp/yamanashi/genre_dir/${prefId}/${pageNumber}/?sr=1&nad=1&ngr=1&num=50";
 };
 
 
-$pageNumber = 1;
-$nextLink = $makeNextLink($pageNumber++);
+$prefIds = array(
+    1005,3242,3243,3258,3269,
+    3280,3319,3326,3330,3678,
+    3679,3680,3681,3682,3683,
+    3684,3685,3686,3687,3688,
+    3781,3782,3783,3784,3785,
+    3786,3787,3788,3789,3790,
+    5386,5387,5389,5391,813,
+    816,819,820,821,822,
+    825,826,827,828,829,
+    830,833,
+);
 
 echo "会社名,メールアドレス", PHP_EOL;
 
-while (!empty($nextLink)) {
-    $crawler = $client->request('GET', $nextLink);
-    $results = $crawler->filter('div.searchResultsWrapper > div.normalResultsBox > article > section')->each(function ($section) {
-        // echo '<pre>'; var_dump($p->attr('onclick')); echo '</pre>';
-        $companyNameLink = $section->filter('h4 > a.blueText');
-        $emailLink = $section->filter('p > a.boxedLink.emailLink');
+foreach ($prefIds as $prefId) {
+    $pageNumber = 1;
+    $nextLink = $makeNextLink($prefId, $pageNumber++);
 
-        if ($companyNameLink->count() <= 0 || $emailLink->count() <= 0) return;
+    while (!empty($nextLink)) {
+        $crawler = $client->request('GET', $nextLink);
+        $results = $crawler->filter('div.searchResultsWrapper > div.normalResultsBox > article > section')->each(function ($section) {
+            // echo '<pre>'; var_dump($p->attr('onclick')); echo '</pre>';
+            $companyNameLink = $section->filter('h4 > a.blueText');
+            $emailLink = $section->filter('p > a.boxedLink.emailLink');
 
-        $columns = array(
-            $companyNameLink->text(),
-            preg_replace('/openMail\(\'[^\']+\', \'|\'\)/u', '', $emailLink->attr('onclick'))
-        );
+            if ($companyNameLink->count() <= 0 || $emailLink->count() <= 0) return;
 
-        echo implode($columns, ","), PHP_EOL;
-    });
+            $columns = array(
+                $companyNameLink->text(),
+                preg_replace('/openMail\(\'[^\']+\', \'|\'\)/u', '', $emailLink->attr('onclick'))
+            );
 
-    $nextLink = '';
-    $crawler->filter('div.bottomNav > ul > li > a')->each(function ($node) use (&$nextLink, $makeNextLink, &$pageNumber) {
-        if ($node->text() == 'Next' && !empty($node->attr('href'))) {
-            $nextLink = $makeNextLink($pageNumber++);
-        }
-    });
+            echo implode($columns, ","), PHP_EOL;
+        });
+
+        $nextLink = '';
+        $crawler->filter('div.bottomNav > ul > li > a')->each(function ($node) use (&$nextLink, $makeNextLink, $prefId, &$pageNumber) {
+            if ($node->text() == 'Next' && !empty($node->attr('href'))) {
+                $nextLink = $makeNextLink($prefId, $pageNumber++);
+            }
+        });
+    }
 }
 
 // function uploadProductsCsv($file)
