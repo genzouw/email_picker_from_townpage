@@ -1,0 +1,21 @@
+{
+    "name": "genzouw/email_picker_from_townpage",
+    "authors": [
+        {
+            "name": "genzouw",
+            "email": "genzouw@gmail.com"
+        }
+    ],
+    "require": {
+		"monolog/monolog": "*",
+        "fabpot/goutte": "2.0.2"
+    },
+	"require-dev": {
+		"phpunit/phpunit": "4.1.*"
+	},
+	"autoload": {
+		"psr-4": {
+			"": "src/"
+		}
+	}
+}
