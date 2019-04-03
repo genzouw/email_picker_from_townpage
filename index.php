@@ -2,17 +2,10 @@
 <?php
 require_once __DIR__ . '/vendor/autoload.php';
 
-use Goutte\Client;
-use Symfony\Component\DomCrawler\Crawler;
-
-$client = new Client();
-
-$makeNextLink = function ( $prefId, $pageNumber ) {
-    // return "http://itp.ne.jp/genre_dir/buildingfirm/pg/${pageNumber}/?ngr=1&num=50";
-    // return "http://itp.ne.jp//${prefId}/genre_dir/${pageNumber}/?sr=1&nad=1&ngr=1&num=50";
-    return "http://itp.ne.jp/${prefId}/19201/genre_dir/pg/${pageNumber}/?sr=1&nad=1&ngr=1&num=50";
-};
-
+function getTargetPageUrl($prefId, $pageNo)
+{
+    return "http://itp.ne.jp/${prefId}/genre_dir/pg/${pageNo}/?sr=1&nad=1&ngr=1&num=50";
+}
 
 $prefIds = array(
     'yamanashi', 'yamaguchi', 'yamagata', 'wakayama', 'toyama', 'tottori', 'tokyo', 'tokushima', 'tochigi', 'shizuoka',
@@ -22,127 +15,60 @@ $prefIds = array(
     'fukuoka', 'fukui', 'ehime', 'chiba', 'aomori', 'akita', 'aichi',
 );
 
-echo "会社名,メールアドレス", PHP_EOL;
+$client = new Goutte\Client();
+
+echo '会社名,メールアドレス,電話番号,住所,都道府県ID', PHP_EOL;
 
 foreach ($prefIds as $prefId) {
-    $pageNumber = 1;
-    $nextLink = $makeNextLink($prefId, $pageNumber++);
+    $pageNo = 1;
 
-    while (!empty($nextLink)) {
-        $crawler = $client->request('GET', $nextLink);
-        $results = $crawler->filter('div.searchResultsWrapper > div.normalResultsBox > article > section')->each(function ($section) {
-            // echo '<pre>'; var_dump($p->attr('onclick')); echo '</pre>';
+    $targetPageUrl = getTargetPageUrl($prefId, $pageNo++);
+
+    while (!empty($targetPageUrl)) {
+        // ページ内のDOMツリーを取得
+        $dom = $client->request(
+            'GET',
+            $targetPageUrl,
+            array(
+                'allow_redirects' => true,
+                'headers' => array(
+                    'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36',
+                ),
+            )
+        );
+
+        // ページ内の企業DOM要素毎にループ
+        $results = $dom->filter('div.searchResultsWrapper > div.normalResultsBox > article > section')->each(function ($section) use ($prefId) {
             $companyNameLink = $section->filter('h4 > a.blueText');
             $emailLink = $section->filter('p > a.boxedLink.emailLink');
 
-            if ($companyNameLink->count() <= 0 || $emailLink->count() <= 0) return;
+            if ($companyNameLink->count() <= 0 || $emailLink->count() <= 0) {
+                return;
+            }
+
+            $tel = preg_match('/[0-9]{2,3}-[0-9]{3,4}-[0-9]{3,4}/u', $section->html(), $telMatches);
+            $address = preg_match('/〒[0-9]{3}-[0-9]{4}[^< ]+/u', $section->html(), $addressMatches);
 
             $columns = array(
                 $companyNameLink->text(),
-                preg_replace('/openMail\(\'[^\']+\', \'|\'\)/u', '', $emailLink->attr('onclick'))
+                preg_replace('/openMail\(\'[^\']+\', \'|\'\)/u', '', $emailLink->attr('onclick')),
+                $telMatches[0] ?? '',
+                $addressMatches[0] ?? '',
+                $prefId,
             );
 
-            echo implode($columns, ","), PHP_EOL;
+            echo implode($columns, ','), PHP_EOL;
         });
 
-        $nextLink = '';
-        $crawler->filter('div.bottomNav > ul > li > a')->each(function ($node) use (&$nextLink, $makeNextLink, $prefId, &$pageNumber) {
-            if ($node->text() == 'Next' && !empty($node->attr('href'))) {
-                $nextLink = $makeNextLink($prefId, $pageNumber++);
+        // ページリンクの「次へ」のリンクを取得
+        $targetPageUrl = '';
+        $dom->filter('div.bottomNav > ul > li > a')->each(function ($node) use (&$targetPageUrl, $prefId, &$pageNo) {
+            if ($node->text() == '次へ' && !empty($node->attr('href'))) {
+                $targetPageUrl = getTargetPageUrl($prefId, $pageNo++);
             }
         });
+
+        // DOS攻撃扱いとならないように
+        sleep(2);
     }
 }
-
-// function uploadProductsCsv($file)
-// {
-    // // csv upload時の更新対象項目設定を初期化する
-    // $crawler = $this->client->request(
-        // 'GET',
-        // "{$this->server}/admin/contents/csv.php?tpl_subno_csv=product"
-    // );
-    // $form = $crawler->filter('form')->form();
-    // $form['mode'] = 'defaultset';
-    // $crawler = $this->client->submit($form);
-
-    // // csv upload開始
-    // $crawler = $this->client->request(
-        // 'GET',
-        // "{$this->server}/admin/products/upload_csv.php"
-    // );
-    // $form = $crawler->filter('form#form1')->form();
-    // $form['csv_file']->upload($file);
-    // $crawler = $this->client->submit($form);
-
-    // $nowText = date('Ymd_Hi');
-    // file_put_contents ("./uploadProductsCsv_${nowText}.html" , $crawler->html());
-// }
-
-// function uploadProductsCsvForCategory($file)
-// {
-    // // csv upload時の更新対象項目設定を初期化する
-    // $crawler = $this->client->request(
-        // 'GET',
-        // "{$this->server}/admin/contents/csv.php?tpl_subno_csv=product"
-    // );
-    // $form = $crawler->filter('form')->form();
-
-    // // 上から順番に
-    // // * 商品ID
-    // // * 商品規格ID
-    // // * 商品名
-    // // * 一覧-メイン画像
-    // // * 詳細-メイン画像
-    // // * 詳細-メイン拡大画像
-    // // * 商品コード
-    // // * 通常価格
-    // // * 販売価格
-    // // * カテゴリID
-    // $form->setValues(array('output_list' => array(
-        // 1 => '1',
-        // 2 => '2',
-        // 3 => '11',
-        // 4 => '21',
-        // 5 => '23',
-        // 6 => '24',
-        // 7 => '48',
-        // 8 => '52',
-        // 9 => '53',
-        // 10 => '72',
-    // )));
-    // $form['mode'] = 'confirm';
-    // $crawler = $this->client->submit($form);
-
-    // // csv upload開始
-    // $crawler = $this->client->request(
-        // 'GET',
-        // "{$this->server}/admin/products/upload_csv.php"
-    // );
-    // $form = $crawler->filter('form#form1')->form();
-    // $form['csv_file']->upload($file);
-    // $crawler = $this->client->submit($form);
-
-    // $nowText = date('Ymd_Hi');
-    // file_put_contents ("./uploadProductsCsv_${nowText}.html" , $crawler->html());
-// }
-
-// function getClient()
-// {
-    // return $this->client;
-// }
-
-// function updateOrderStatus($orderId, $status)
-// {
-    // $crawler = $this->client->request(
-        // 'GET',
-        // "{$this->server}/admin/order/edit.php?mode=pre_edit&order_id=".$orderId
-    // );
-
-    // $form = $crawler->filter('form#form1')->form();
-
-    // $form['status'] = $status;
-    // $crawler = $this->client->submit($form);
-
-    // $nowText = date('Ymd_Hi');
-    // file_put_contents ("./updateOrderStatus_${nowText}.html" , $crawler->html());
-// }
